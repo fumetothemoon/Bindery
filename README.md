@@ -3,6 +3,8 @@ A single-file browser tool that turns scanned page images (JPG, PNG, WEBP) into 
 
 單文件瀏覽器工具，可將掃描的頁面影像（JPG、PNG、WEBP）轉換為標準的 EPUB 檔案－無論是單冊書籍或多卷系列。無需安裝，不用註冊帳號，沒有廣告或是帶有病毒的彈出視窗：所有操作都在您的瀏覽器中用戶端運行。
 
+![bindery](./bindery.png)
+
 ## Why
 Ebooks sourced from scans or downloads sometimes turn out to be a folder of page images instead of a real EPUB. Bindery packages those images into a standards-compliant EPUB3 file that opens correctly in Calibre, Apple Books, Kindle (via conversion), and most other readers.
 
