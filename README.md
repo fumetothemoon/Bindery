@@ -1,10 +1,10 @@
 # Bindery
 
-A single-file browser tool that turns scanned page images (JPG, PNG, WEBP) into a proper EPUB — one book, or a multi-volume series. No install, no accounts, No pop-ups with ads or viruses: everything runs client-side in your browser.
+A single-file browser tool that turns scanned page images (JPG, PNG, WEBP) into a proper EPUB — one book, or a multi-series collection. No install, no accounts, No pop-ups with ads or viruses: everything runs client-side in your browser.
 
 單文件瀏覽器工具，可將掃描的頁面影像（JPG、PNG、WEBP）轉換為標準的 EPUB 檔案－無論是單冊書籍或多卷系列。無需安裝，不用註冊帳號，沒有廣告或是帶有病毒的彈出視窗：所有操作都在您的瀏覽器中用戶端運行。
 
-![bindery](./bindery.png)
+![bindery](./bindery.jpeg)
 
 ## Why
 
@@ -16,18 +16,18 @@ Ebooks sourced from scans or downloads sometimes turn out to be a folder of page
 
 1. Download [`bindery.html`](./bindery.html) (or open it via [GitHub Pages](#hosting), if enabled on this repo).下載 [`bindery.html`](./bindery.html)（如果此倉庫啟用了 [GitHub Pages](#hosting)，則可透過 GitHub Pages 開啟）。
 2. Open it in any modern browser — Chrome, Edge, Firefox, or Safari.在任何瀏覽器中開啟它—Chrome、Edge、Firefox 或 Safari。
-3. Drag your page images into a volume, or use "Choose images" / "Choose folder".將頁面圖像拖入磁碟區中，或使用「選擇圖像」/「選擇資料夾」選項。
+3. Drag your page images into a series, or use "Choose images" / "Choose folder".將頁面圖像拖入系列中，或使用「選擇圖像」/「選擇資料夾」選項。
 4. Fill in the book/series details and hit **Generate EPUB**.填寫書籍/系列詳情，然後點選「生成 EPUB」。
 
 ## Features
 
-- **Multi-volume / series support** — add as many volumes as you need (`+ Add volume`), each with its own drop zone and page queue, collapsible so long series stay manageable.
-- **Duplicate filename handling** — if a new file's name already exists in a volume, you're prompted to Replace, Skip, or Rename, with an "apply to all remaining" option for large batches.
-- **Combine into one book** — merge every volume into a single EPUB (each volume becomes a chapter entry in the table of contents), or keep volumes as separate files named `SeriesTitle-1`, `SeriesTitle-2`, etc.
+- **Multi-series support** — add as many series as you need (`+ Add series`), each with its own drop zone and page queue, collapsible so long collections stay manageable.
+- **Duplicate filename handling** — if a new file's name already exists in a series, you're prompted to Replace, Skip, or Rename, with an "apply to all remaining" option for large batches.
+- **Combine into one book** — merge every series into a single EPUB (each series becomes a chapter entry in the table of contents), or keep series as separate files named `SeriesTitle-1`, `SeriesTitle-2`, etc.
 - **Size optimization** — optional client-side resize/recompress (adjustable max width and JPEG quality) before packing, since raw scans can otherwise produce multi-gigabyte EPUBs.
 
-- **多磁碟區/系列支援** — 根據需要新增任意數量的磁碟區（點擊「+ 新增磁碟區」），每個磁碟區都有獨立的拖放區域和頁面佇列，可以摺疊，方便管理多個系列。
-- **重複檔案名稱處理** — 如果新檔案名稱已存在於某個磁碟區中，系統會提示您選擇“取代”、“跳過”或“重新命名”，對於大量文件，也可以選擇“套用於所有剩餘檔案”。
+- **多系列支援** — 根據需要新增任意數量的系列（點擊「+ 新增系列」），每個系列都有獨立的拖放區域和頁面佇列，可以摺疊，方便管理多個系列。
+- **重複檔案名稱處理** — 如果新檔案名稱已存在於某個系列中，系統會提示您選擇“取代”、“跳過”或“重新命名”，對於大量文件，也可以選擇“套用於所有剩餘檔案”。
 - **合併成一本書** — 將所有捲合併成一個 EPUB 文件（每個卷都會成為目錄中的一個章節條目），或者將卷保留為單獨的文件，分別命名為 `SeriesTitle-1`、`SeriesTitle-2` 等。
 - **檔案大小最佳化** — 打包前可選擇在客戶端調整大小/重新壓縮（可調整最大寬度和 JPEG 品質），因為原始掃描件可能會產生數 GB 的 EPUB 檔案。
 
