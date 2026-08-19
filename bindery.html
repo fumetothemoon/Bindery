@@ -1,539 +1,1081 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bindery — turn scanned pages into an EPUB</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bindery — turn scanned pages into an EPUB</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap");
 
-  :root{
-    --bg: #1C1A17;
-    --surface: #242119;
-    --surface-2: #2C2820;
-    --line: #3D3830;
-    --ink: #EDE6D6;
-    --muted: #A69C89;
-    --faint: #756B5C;
-    --leather: #8C3A2B;
-    --leather-light: #C25A44;
-    --gold: #B8935A;
-    --gold-light: #D4B27E;
-    --danger: #C25A44;
-    --radius: 6px;
-  }
-  *{ box-sizing: border-box; }
-  html,body{ margin:0; padding:0; }
-  body{
-    background: var(--bg);
-    color: var(--ink);
-    font-family: 'Inter', sans-serif;
-    min-height: 100vh;
-  }
-  ::selection{ background: var(--leather); color: #fff; }
+      :root {
+        --bg: #1c1a17;
+        --surface: #242119;
+        --surface-2: #2c2820;
+        --line: #3d3830;
+        --ink: #ede6d6;
+        --muted: #a69c89;
+        --faint: #756b5c;
+        --leather: #8c3a2b;
+        --leather-light: #c25a44;
+        --gold: #b8935a;
+        --gold-light: #d4b27e;
+        --danger: #c25a44;
+        --radius: 6px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Inter", sans-serif;
+        min-height: 100vh;
+      }
+      ::selection {
+        background: var(--leather);
+        color: #fff;
+      }
 
-  .wrap{ max-width: 1180px; margin: 0 auto; padding: 48px 32px 80px; }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 48px 32px 80px;
+      }
 
-  header.hero{
-    display:flex; align-items:flex-end; justify-content:space-between;
-    gap: 24px; margin-bottom: 40px; padding-bottom: 28px;
-    border-bottom: 1px solid var(--line);
-  }
-  header.hero h1{
-    font-family: 'Fraunces', serif; font-weight: 500; font-size: 42px;
-    margin: 0; letter-spacing: -0.01em; color: var(--ink);
-  }
-  header.hero h1 em{ color: var(--gold-light); font-style: italic; }
-  header.hero p{ margin: 8px 0 0; color: var(--muted); font-size: 15px; max-width: 46ch; }
-  .spine-meter{
-    display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0;
-  }
-  .spine-meter .count{ font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--gold-light); }
-  .spine-bars{ display:flex; align-items:flex-end; gap:2px; height:34px; }
-  .spine-bars .bar{
-    width:3px; background: var(--line); border-radius: 1px;
-    transition: height .25s ease, background .25s ease;
-  }
-  .spine-bars .bar.on{ background: var(--gold); }
+      header.hero {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 40px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--line);
+      }
+      header.hero h1 {
+        font-family: "Fraunces", serif;
+        font-weight: 500;
+        font-size: 42px;
+        margin: 0;
+        letter-spacing: -0.01em;
+        color: var(--ink);
+      }
+      header.hero h1 em {
+        color: var(--gold-light);
+        font-style: italic;
+      }
+      header.hero p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+        max-width: 46ch;
+      }
+      .spine-meter {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .spine-meter .count {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+        color: var(--gold-light);
+      }
+      .spine-bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+        height: 34px;
+      }
+      .spine-bars .bar {
+        width: 3px;
+        background: var(--line);
+        border-radius: 1px;
+        transition:
+          height 0.25s ease,
+          background 0.25s ease;
+      }
+      .spine-bars .bar.on {
+        background: var(--gold);
+      }
 
-  .grid{ display:grid; grid-template-columns: 1.5fr 1fr; gap: 32px; align-items:start; }
-  @media (max-width: 860px){ .grid{ grid-template-columns: 1fr; } }
+      .grid {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 32px;
+        align-items: start;
+      }
+      @media (max-width: 860px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
 
-  .card{
-    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
-    padding: 24px;
-  }
-  .card + .card{ margin-top: 20px; }
-  .card h2{
-    font-family:'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--gold-light); margin: 0 0 16px;
-  }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 24px;
+      }
+      .card + .card {
+        margin-top: 20px;
+      }
+      .card h2 {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--gold-light);
+        margin: 0 0 16px;
+      }
 
-  .section-head{
-    display:flex; align-items:center; justify-content:space-between; margin-bottom: 16px;
-  }
-  .section-head h2{
-    font-family:'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--gold-light); margin: 0;
-  }
-  .btn-add-vol{
-    display:flex; align-items:center; gap: 6px;
-  }
-  .btn-add-vol .plus{ font-size: 15px; line-height:1; }
+      .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      .section-head h2 {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--gold-light);
+        margin: 0;
+      }
+      .btn-add-vol {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .btn-add-vol .plus {
+        font-size: 15px;
+        line-height: 1;
+      }
 
-  .volumes{ display:flex; flex-direction:column; gap: 16px; }
+      .volumes {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
 
-  .vol-card{
-    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
-    overflow: hidden;
-  }
-  .vol-head{
-    display:flex; align-items:center; gap: 10px; padding: 16px 20px;
-    cursor: pointer; user-select:none;
-  }
-  .vol-head .chevron{
-    color: var(--faint); font-size: 11px; transition: transform .15s;
-    flex-shrink:0; width: 12px;
-  }
-  .vol-card.collapsed .vol-head .chevron{ transform: rotate(-90deg); }
-  .vol-head .vol-title{
-    flex: 1; background: transparent; border: none; color: var(--ink);
-    font-family: 'Fraunces', serif; font-weight: 500; font-size: 17px;
-    padding: 4px 2px; border-radius: 4px; min-width: 0;
-  }
-  .vol-head .vol-title:hover, .vol-head .vol-title:focus{ background: var(--surface-2); outline:none; }
-  .vol-head .vol-title::placeholder{ color: var(--faint); font-style: italic; }
-  .vol-head .vol-count{
-    font-family:'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--faint);
-    flex-shrink:0; white-space:nowrap;
-  }
-  .vol-head .vol-remove{
-    flex-shrink:0; color: var(--faint); font-size: 16px; padding: 4px 6px; line-height:1;
-  }
-  .vol-head .vol-remove:hover{ color: var(--danger); }
-  .vol-body{ padding: 0 20px 20px; border-top: 1px solid var(--line); }
-  .vol-card.collapsed .vol-body{ display:none; }
-  .vol-body-inner{ padding-top: 18px; }
+      .vol-card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .vol-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 16px 20px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .vol-head .chevron {
+        color: var(--faint);
+        font-size: 11px;
+        transition: transform 0.15s;
+        flex-shrink: 0;
+        width: 12px;
+      }
+      .vol-card.collapsed .vol-head .chevron {
+        transform: rotate(-90deg);
+      }
+      .vol-head .vol-title {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--ink);
+        font-family: "Fraunces", serif;
+        font-weight: 500;
+        font-size: 17px;
+        padding: 4px 2px;
+        border-radius: 4px;
+        min-width: 0;
+      }
+      .vol-head .vol-title:hover,
+      .vol-head .vol-title:focus {
+        background: var(--surface-2);
+        outline: none;
+      }
+      .vol-head .vol-title::placeholder {
+        color: var(--faint);
+        font-style: italic;
+      }
+      .vol-head .vol-count {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11.5px;
+        color: var(--faint);
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+      .vol-head .vol-remove {
+        flex-shrink: 0;
+        color: var(--faint);
+        font-size: 16px;
+        padding: 4px 6px;
+        line-height: 1;
+      }
+      .vol-head .vol-remove:hover {
+        color: var(--danger);
+      }
+      .vol-body {
+        padding: 0 20px 20px;
+        border-top: 1px solid var(--line);
+      }
+      .vol-card.collapsed .vol-body {
+        display: none;
+      }
+      .vol-body-inner {
+        padding-top: 18px;
+      }
 
-  .dropzone{
-    border: 1.5px dashed var(--line); border-radius: 8px; padding: 28px 20px;
-    text-align:center; cursor:pointer; transition: border-color .15s, background .15s;
-    background: var(--surface-2);
-  }
-  .dropzone:hover, .dropzone.drag{ border-color: var(--gold); background: #2F2A20; }
-  .dropzone .icon{ font-size: 24px; color: var(--faint); margin-bottom: 8px; display:block; }
-  .dropzone strong{ color: var(--ink); font-weight: 500; font-size: 14px; }
-  .dropzone span{ display:block; color: var(--muted); font-size: 12.5px; margin-top: 5px; }
-  .dz-actions{ display:flex; gap: 10px; justify-content:center; margin-top: 14px; }
-  input[type=file]{ display:none; }
+      .dropzone {
+        border: 1.5px dashed var(--line);
+        border-radius: 8px;
+        padding: 28px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+        background: var(--surface-2);
+      }
+      .dropzone:hover,
+      .dropzone.drag {
+        border-color: var(--gold);
+        background: #2f2a20;
+      }
+      .dropzone .icon {
+        font-size: 24px;
+        color: var(--faint);
+        margin-bottom: 8px;
+        display: block;
+      }
+      .dropzone strong {
+        color: var(--ink);
+        font-weight: 500;
+        font-size: 14px;
+      }
+      .dropzone span {
+        display: block;
+        color: var(--muted);
+        font-size: 12.5px;
+        margin-top: 5px;
+      }
+      .dz-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 14px;
+      }
+      input[type="file"] {
+        display: none;
+      }
 
-  button{
-    font-family: 'Inter', sans-serif; font-size: 13.5px; font-weight: 500;
-    border-radius: var(--radius); cursor: pointer; transition: all .12s;
-    border: none; background: none;
-  }
-  .btn{
-    background: var(--surface-2); border: 1px solid var(--line); color: var(--ink);
-    padding: 9px 16px;
-  }
-  .btn:hover{ border-color: var(--faint); background: #332E24; }
-  .btn:active{ transform: scale(0.98); }
-  .btn.primary{
-    background: var(--leather); border-color: var(--leather); color: #F7ECE6;
-    width: 100%; padding: 13px 16px; font-size: 14.5px;
-  }
-  .btn.primary:hover{ background: var(--leather-light); border-color: var(--leather-light); }
-  .btn.primary:disabled{ opacity: .45; cursor:not-allowed; transform:none; background: var(--leather); }
-  .btn.ghost{ background: transparent; border-color: transparent; color: var(--muted); padding: 6px 8px; }
-  .btn.ghost:hover{ color: var(--ink); background: var(--surface-2); }
-  .btn.small{ padding: 6px 12px; font-size: 12.5px; }
+      button {
+        font-family: "Inter", sans-serif;
+        font-size: 13.5px;
+        font-weight: 500;
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: all 0.12s;
+        border: none;
+        background: none;
+      }
+      .btn {
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        color: var(--ink);
+        padding: 9px 16px;
+      }
+      .btn:hover {
+        border-color: var(--faint);
+        background: #332e24;
+      }
+      .btn:active {
+        transform: scale(0.98);
+      }
+      .btn.primary {
+        background: var(--leather);
+        border-color: var(--leather);
+        color: #f7ece6;
+        width: 100%;
+        padding: 13px 16px;
+        font-size: 14.5px;
+      }
+      .btn.primary:hover {
+        background: var(--leather-light);
+        border-color: var(--leather-light);
+      }
+      .btn.primary:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        transform: none;
+        background: var(--leather);
+      }
+      .btn.ghost {
+        background: transparent;
+        border-color: transparent;
+        color: var(--muted);
+        padding: 6px 8px;
+      }
+      .btn.ghost:hover {
+        color: var(--ink);
+        background: var(--surface-2);
+      }
+      .btn.small {
+        padding: 6px 12px;
+        font-size: 12.5px;
+      }
 
-  .queue-toolbar{ display:flex; align-items:center; justify-content:flex-end; gap: 8px; margin: 14px 0 10px; }
+      .queue-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        margin: 14px 0 10px;
+      }
 
-  .queue{ max-height: 380px; overflow-y: auto; display:flex; flex-direction:column; gap: 4px;
-    margin: -4px; padding: 4px; }
-  .queue::-webkit-scrollbar{ width: 8px; }
-  .queue::-webkit-scrollbar-thumb{ background: var(--line); border-radius: 4px; }
+      .queue {
+        max-height: 380px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: -4px;
+        padding: 4px;
+      }
+      .queue::-webkit-scrollbar {
+        width: 8px;
+      }
+      .queue::-webkit-scrollbar-thumb {
+        background: var(--line);
+        border-radius: 4px;
+      }
 
-  .row{
-    display:flex; align-items:center; gap: 10px; padding: 6px 8px;
-    border-radius: var(--radius); background: var(--surface-2);
-    border: 1px solid transparent;
-  }
-  .row:hover{ border-color: var(--line); }
-  .row.dragging{ opacity: .4; }
-  .row .handle{ color: var(--faint); cursor: grab; font-size: 14px; user-select:none; }
-  .row .num{
-    font-family:'IBM Plex Mono', monospace; font-size: 11px; color: var(--faint);
-    width: 34px; text-align:right; flex-shrink:0;
-  }
-  .row img{
-    width: 34px; height: 44px; object-fit: cover; border-radius: 3px;
-    background: #000; flex-shrink:0; border: 1px solid var(--line);
-  }
-  .row .name{
-    flex: 1; font-size: 13px; color: var(--ink); white-space:nowrap;
-    overflow:hidden; text-overflow: ellipsis; min-width:0;
-  }
-  .row .size{ font-family:'IBM Plex Mono', monospace; font-size: 11px; color: var(--faint); flex-shrink:0; }
-  .row .cover-badge{
-    font-family:'IBM Plex Mono', monospace; font-size: 10px; letter-spacing:.06em;
-    color: var(--gold-light); border: 1px solid var(--gold); border-radius: 3px;
-    padding: 1px 5px; flex-shrink:0;
-  }
-  .row .rm{ flex-shrink:0; color: var(--faint); font-size: 15px; line-height:1; padding: 4px 6px; }
-  .row .rm:hover{ color: var(--danger); }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 8px;
+        border-radius: var(--radius);
+        background: var(--surface-2);
+        border: 1px solid transparent;
+      }
+      .row:hover {
+        border-color: var(--line);
+      }
+      .row.dragging {
+        opacity: 0.4;
+      }
+      .row .handle {
+        color: var(--faint);
+        cursor: grab;
+        font-size: 14px;
+        user-select: none;
+      }
+      .row .num {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        color: var(--faint);
+        width: 34px;
+        text-align: right;
+        flex-shrink: 0;
+      }
+      .row img {
+        width: 34px;
+        height: 44px;
+        object-fit: cover;
+        border-radius: 3px;
+        background: #000;
+        flex-shrink: 0;
+        border: 1px solid var(--line);
+      }
+      .row .name {
+        flex: 1;
+        font-size: 13px;
+        color: var(--ink);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+      }
+      .row .size {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        color: var(--faint);
+        flex-shrink: 0;
+      }
+      .row .cover-badge {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        color: var(--gold-light);
+        border: 1px solid var(--gold);
+        border-radius: 3px;
+        padding: 1px 5px;
+        flex-shrink: 0;
+      }
+      .row .rm {
+        flex-shrink: 0;
+        color: var(--faint);
+        font-size: 15px;
+        line-height: 1;
+        padding: 4px 6px;
+      }
+      .row .rm:hover {
+        color: var(--danger);
+      }
 
-  .empty-state{ text-align:center; padding: 26px 10px; color: var(--faint); font-size: 12.5px; }
+      .empty-state {
+        text-align: center;
+        padding: 26px 10px;
+        color: var(--faint);
+        font-size: 12.5px;
+      }
 
-  label.field{ display:block; margin-bottom: 16px; }
-  label.field:last-child{ margin-bottom: 0; }
-  label.field .lbl{ display:block; font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
-  input[type=text], select{
-    width: 100%; background: var(--surface-2); border: 1px solid var(--line);
-    color: var(--ink); border-radius: var(--radius); padding: 9px 11px; font-size: 13.5px;
-    font-family: 'Inter', sans-serif;
-  }
-  input[type=text]:focus, select:focus{ outline: none; border-color: var(--gold); }
-  input[type=text]::placeholder{ color: var(--faint); }
+      label.field {
+        display: block;
+        margin-bottom: 16px;
+      }
+      label.field:last-child {
+        margin-bottom: 0;
+      }
+      label.field .lbl {
+        display: block;
+        font-size: 12.5px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      input[type="text"],
+      select {
+        width: 100%;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        color: var(--ink);
+        border-radius: var(--radius);
+        padding: 9px 11px;
+        font-size: 13.5px;
+        font-family: "Inter", sans-serif;
+      }
+      input[type="text"]:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--gold);
+      }
+      input[type="text"]::placeholder {
+        color: var(--faint);
+      }
 
-  .row-flex{ display:flex; gap: 12px; }
-  .row-flex > label{ flex: 1; }
+      .row-flex {
+        display: flex;
+        gap: 12px;
+      }
+      .row-flex > label {
+        flex: 1;
+      }
 
-  .toggle-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom: 14px; }
-  .toggle-row .lbl{ font-size: 13px; color: var(--ink); }
-  .toggle-row .sub{ font-size: 11.5px; color: var(--faint); margin-top: 2px; }
-  .switch{ position:relative; width: 38px; height: 22px; flex-shrink:0; }
-  .switch input{ opacity:0; width:0; height:0; }
-  .switch .track{
-    position:absolute; inset:0; background: var(--line); border-radius: 22px;
-    cursor:pointer; transition: background .15s;
-  }
-  .switch .track:before{
-    content:''; position:absolute; width:16px; height:16px; left:3px; top:3px;
-    background: var(--muted); border-radius:50%; transition: all .15s;
-  }
-  .switch input:checked + .track{ background: var(--leather); }
-  .switch input:checked + .track:before{ transform: translateX(16px); background: #F7ECE6; }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+      .toggle-row .lbl {
+        font-size: 13px;
+        color: var(--ink);
+      }
+      .toggle-row .sub {
+        font-size: 11.5px;
+        color: var(--faint);
+        margin-top: 2px;
+      }
+      .switch {
+        position: relative;
+        width: 38px;
+        height: 22px;
+        flex-shrink: 0;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .switch .track {
+        position: absolute;
+        inset: 0;
+        background: var(--line);
+        border-radius: 22px;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .switch .track:before {
+        content: "";
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        left: 3px;
+        top: 3px;
+        background: var(--muted);
+        border-radius: 50%;
+        transition: all 0.15s;
+      }
+      .switch input:checked + .track {
+        background: var(--leather);
+      }
+      .switch input:checked + .track:before {
+        transform: translateX(16px);
+        background: #f7ece6;
+      }
 
-  .compress-opts{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
+      .compress-opts {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 4px;
+      }
 
-  .slider-row{ display:flex; align-items:center; gap: 10px; }
-  input[type=range]{ flex:1; accent-color: var(--gold); }
-  .slider-val{ font-family:'IBM Plex Mono', monospace; font-size: 12px; color: var(--gold-light); width: 32px; text-align:right; }
+      .slider-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      input[type="range"] {
+        flex: 1;
+        accent-color: var(--gold);
+      }
+      .slider-val {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        color: var(--gold-light);
+        width: 32px;
+        text-align: right;
+      }
 
-  .stats{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
-  .stat{ background: var(--surface-2); border-radius: var(--radius); padding: 10px 12px; }
-  .stat .k{ font-size: 10.5px; color: var(--faint); text-transform:uppercase; letter-spacing: .08em; }
-  .stat .v{ font-family:'IBM Plex Mono', monospace; font-size: 16px; color: var(--ink); margin-top: 3px; }
+      .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .stat {
+        background: var(--surface-2);
+        border-radius: var(--radius);
+        padding: 10px 12px;
+      }
+      .stat .k {
+        font-size: 10.5px;
+        color: var(--faint);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .stat .v {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 16px;
+        color: var(--ink);
+        margin-top: 3px;
+      }
 
-  .progress-wrap{ margin-top: 16px; display:none; }
-  .progress-wrap.on{ display:block; }
-  .progress-label{ display:flex; justify-content:space-between; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-family:'IBM Plex Mono', monospace; }
-  .progress-track{ height: 6px; background: var(--surface-2); border-radius: 4px; overflow:hidden; }
-  .progress-fill{ height:100%; background: linear-gradient(90deg, var(--leather), var(--gold)); width:0%; transition: width .15s ease; }
+      .progress-wrap {
+        margin-top: 16px;
+        display: none;
+      }
+      .progress-wrap.on {
+        display: block;
+      }
+      .progress-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+        font-family: "IBM Plex Mono", monospace;
+      }
+      .progress-track {
+        height: 6px;
+        background: var(--surface-2);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--leather), var(--gold));
+        width: 0%;
+        transition: width 0.15s ease;
+      }
 
-  .note{ font-size: 12px; color: var(--faint); margin-top: 14px; line-height: 1.6; }
-  .note strong{ color: var(--muted); }
+      .note {
+        font-size: 12px;
+        color: var(--faint);
+        margin-top: 14px;
+        line-height: 1.6;
+      }
+      .note strong {
+        color: var(--muted);
+      }
 
-  .footer-actions{ margin-top: 18px; display:flex; flex-direction:column; gap:10px; }
-  .status-msg{ font-size: 12.5px; text-align:center; color: var(--muted); min-height: 16px; }
-  .status-msg.err{ color: var(--danger); }
-  .status-msg.ok{ color: #8FBF7A; }
+      .footer-actions {
+        margin-top: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .status-msg {
+        font-size: 12.5px;
+        text-align: center;
+        color: var(--muted);
+        min-height: 16px;
+      }
+      .status-msg.err {
+        color: var(--danger);
+      }
+      .status-msg.ok {
+        color: #8fbf7a;
+      }
 
-  .modal-overlay{
-    position: fixed; inset: 0; background: rgba(10,9,7,0.65);
-    display:none; align-items:center; justify-content:center; z-index: 1000; padding: 20px;
-  }
-  .modal-overlay.on{ display:flex; }
-  .modal{
-    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
-    padding: 24px; max-width: 420px; width: 100%;
-  }
-  .modal h3{
-    font-family:'Fraunces', serif; font-weight: 500; font-size: 19px; margin: 0 0 8px; color: var(--ink);
-  }
-  .modal p{ font-size: 13.5px; color: var(--muted); margin: 0 0 4px; line-height: 1.6; }
-  .modal .fname{
-    font-family:'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--gold-light);
-    background: var(--surface-2); border-radius: 4px; padding: 6px 9px; margin: 10px 0 16px;
-    word-break: break-all;
-  }
-  .modal .opts{ display:flex; flex-direction:column; gap: 8px; }
-  .modal .opts button{
-    text-align:left; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink);
-    padding: 11px 13px; border-radius: var(--radius); font-size: 13.5px;
-  }
-  .modal .opts button:hover{ border-color: var(--gold); background: #332E24; }
-  .modal .opts button .sub{ display:block; font-size: 11.5px; color: var(--faint); margin-top: 2px; font-weight: 400; }
-  .modal .applyall{
-    display:flex; align-items:center; gap: 8px; margin-top: 16px; font-size: 12.5px; color: var(--muted);
-  }
-  .modal .applyall input{ accent-color: var(--gold); }
-</style>
-</head>
-<body>
-
-<div class="modal-overlay" id="conflictOverlay">
-  <div class="modal">
-    <h3>This filename already exists</h3>
-    <p>A page named:</p>
-    <div class="fname" id="conflictName"></div>
-    <p>is already in this volume's queue. What would you like to do?</p>
-    <div class="opts" style="margin-top:14px">
-      <button type="button" data-action="replace">Replace<span class="sub">Swap the existing page for this new file</span></button>
-      <button type="button" data-action="rename">Rename<span class="sub">Keep both — add this one under a new name</span></button>
-      <button type="button" data-action="skip">Skip<span class="sub">Don't add this file, keep the existing page</span></button>
-    </div>
-    <label class="applyall">
-      <input type="checkbox" id="applyAllConflicts">
-      Do this for all remaining duplicate names
-    </label>
-  </div>
-</div>
-
-<div class="wrap">
-
-  <header class="hero">
-    <div>
-      <h1>Bind<em>ery</em></h1>
-      <p>Turn folders of scanned page images into proper EPUBs — one book, or a whole series. Everything runs in your browser — nothing is uploaded anywhere.</p>
-    </div>
-    <div class="spine-meter">
-      <div class="count" id="spineCount">0 pages</div>
-      <div class="spine-bars" id="spineBars"></div>
-    </div>
-  </header>
-
-  <div class="grid">
-
-    <div>
-      <div class="section-head">
-        <h2>Volumes</h2>
-        <button class="btn small btn-add-vol" id="addVolBtn" type="button"><span class="plus">+</span> Add volume</button>
-      </div>
-      <div class="volumes" id="volumes"></div>
-    </div>
-
-    <div>
-      <div class="card">
-        <h2>Series details</h2>
-        <label class="field">
-          <span class="lbl">Series title <span style="opacity:.6">(optional)</span></span>
-          <input type="text" id="seriesInput" placeholder="e.g. The Salt Chronicles">
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 9, 7, 0.65);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+      }
+      .modal-overlay.on {
+        display: flex;
+      }
+      .modal {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 24px;
+        max-width: 420px;
+        width: 100%;
+      }
+      .modal h3 {
+        font-family: "Fraunces", serif;
+        font-weight: 500;
+        font-size: 19px;
+        margin: 0 0 8px;
+        color: var(--ink);
+      }
+      .modal p {
+        font-size: 13.5px;
+        color: var(--muted);
+        margin: 0 0 4px;
+        line-height: 1.6;
+      }
+      .modal .fname {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12.5px;
+        color: var(--gold-light);
+        background: var(--surface-2);
+        border-radius: 4px;
+        padding: 6px 9px;
+        margin: 10px 0 16px;
+        word-break: break-all;
+      }
+      .modal .opts {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .modal .opts button {
+        text-align: left;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        color: var(--ink);
+        padding: 11px 13px;
+        border-radius: var(--radius);
+        font-size: 13.5px;
+      }
+      .modal .opts button:hover {
+        border-color: var(--gold);
+        background: #332e24;
+      }
+      .modal .opts button .sub {
+        display: block;
+        font-size: 11.5px;
+        color: var(--faint);
+        margin-top: 2px;
+        font-weight: 400;
+      }
+      .modal .applyall {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+      .modal .applyall input {
+        accent-color: var(--gold);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="modal-overlay" id="conflictOverlay">
+      <div class="modal">
+        <h3>This filename already exists</h3>
+        <p>A page named:</p>
+        <div class="fname" id="conflictName"></div>
+        <p>is already in this volume's queue. What would you like to do?</p>
+        <div class="opts" style="margin-top: 14px">
+          <button type="button" data-action="replace">
+            Replace<span class="sub"
+              >Swap the existing page for this new file</span
+            >
+          </button>
+          <button type="button" data-action="rename">
+            Rename<span class="sub"
+              >Keep both — add this one under a new name</span
+            >
+          </button>
+          <button type="button" data-action="skip">
+            Skip<span class="sub"
+              >Don't add this file, keep the existing page</span
+            >
+          </button>
+        </div>
+        <label class="applyall">
+          <input type="checkbox" id="applyAllConflicts" />
+          Do this for all remaining duplicate names
         </label>
-        <div class="row-flex">
-          <label class="field">
-            <span class="lbl">Author</span>
-            <input type="text" id="authorInput" placeholder="Unknown">
-          </label>
-          <label class="field">
-            <span class="lbl">Language</span>
-            <select id="langInput">
-              <option value="en" selected>English</option>
-              <option value="zh">Chinese</option>
-              <option value="ja">Japanese</option>
-              <option value="ko">Korean</option>
-              <option value="es">Spanish</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-              <option value="pt">Portuguese</option>
-              <option value="ru">Russian</option>
-              <option value="ar">Arabic</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Image handling</h2>
-        <div class="toggle-row">
-          <div>
-            <div class="lbl">Optimize file size</div>
-            <div class="sub">Resizes and re-compresses pages — keeps each EPUB much smaller</div>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="compressToggle" checked>
-            <span class="track"></span>
-          </label>
-        </div>
-        <div class="compress-opts" id="compressOpts">
-          <label class="field" style="margin-bottom:0">
-            <span class="lbl">Max width</span>
-            <select id="maxWidth">
-              <option value="1200">1200 px</option>
-              <option value="1600" selected>1600 px</option>
-              <option value="2000">2000 px</option>
-              <option value="2400">2400 px</option>
-            </select>
-          </label>
-          <label class="field" style="margin-bottom:0">
-            <span class="lbl">Quality</span>
-            <div class="slider-row">
-              <input type="range" id="quality" min="50" max="95" value="82" step="1">
-              <span class="slider-val" id="qualityVal">82</span>
-            </div>
-          </label>
-        </div>
-        <div class="stats">
-          <div class="stat"><div class="k">Total pages</div><div class="v" id="statPages">0</div></div>
-          <div class="stat"><div class="k">Est. size</div><div class="v" id="statSize">—</div></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Generate</h2>
-        <div class="toggle-row">
-          <div>
-            <div class="lbl">Combine all volumes into one book</div>
-            <div class="sub" id="combineSub">Merge every volume's pages into a single EPUB, in volume order</div>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="combineToggle">
-            <span class="track"></span>
-          </label>
-        </div>
-        <div class="footer-actions">
-          <button class="btn primary" id="generateBtn" type="button" disabled>Add pages first</button>
-          <div class="status-msg" id="statusMsg"></div>
-        </div>
-        <div class="progress-wrap" id="progressWrap">
-          <div class="progress-label"><span id="progressLabel">Stitching pages…</span><span id="progressPct">0%</span></div>
-          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-        </div>
-        <p class="note"><strong>Note:</strong> with multiple volumes, Bindery builds one EPUB per volume, then bundles them into a single .zip so your browser doesn't try to auto-download several files at once. Each volume uses its own name as the EPUB title. Empty volumes are skipped.</p>
       </div>
     </div>
 
-  </div>
-</div>
+    <div class="wrap">
+      <header class="hero">
+        <div>
+          <h1>Bind<em>ery</em></h1>
+          <p>
+            Turn folders of scanned page images into proper EPUBs — one book, or
+            a whole series. Everything runs in your browser — nothing is
+            uploaded anywhere.
+          </p>
+        </div>
+        <div class="spine-meter">
+          <div class="count" id="spineCount">0 pages</div>
+          <div class="spine-bars" id="spineBars"></div>
+        </div>
+      </header>
 
-<script>
-(function(){
-  const state = { volumes: [] };
-  let volCounter = 0, pageCounter = 0;
+      <div class="grid">
+        <div>
+          <div class="section-head">
+            <h2>Volumes</h2>
+            <button class="btn small btn-add-vol" id="addVolBtn" type="button">
+              <span class="plus">+</span> Add volume
+            </button>
+          </div>
+          <div class="volumes" id="volumes"></div>
+        </div>
 
-  const el = (id) => document.getElementById(id);
-  const volumesEl = el('volumes');
-  const addVolBtn = el('addVolBtn');
-  const statPages = el('statPages');
-  const statSize = el('statSize');
-  const spineCount = el('spineCount');
-  const spineBars = el('spineBars');
-  const generateBtn = el('generateBtn');
-  const statusMsg = el('statusMsg');
-  const progressWrap = el('progressWrap');
-  const progressFill = el('progressFill');
-  const progressPct = el('progressPct');
-  const progressLabel = el('progressLabel');
-  const compressToggle = el('compressToggle');
-  const compressOpts = el('compressOpts');
-  const combineToggle = el('combineToggle');
-  const quality = el('quality');
-  const qualityVal = el('qualityVal');
-  const conflictOverlay = el('conflictOverlay');
-  const conflictName = el('conflictName');
-  const applyAllConflicts = el('applyAllConflicts');
+        <div>
+          <div class="card">
+            <h2>Series details</h2>
+            <label class="field">
+              <span class="lbl"
+                >Series title <span style="opacity: 0.6">(optional)</span></span
+              >
+              <input
+                type="text"
+                id="seriesInput"
+                placeholder="e.g. The Salt Chronicles"
+              />
+            </label>
+            <div class="row-flex">
+              <label class="field">
+                <span class="lbl">Author</span>
+                <input type="text" id="authorInput" placeholder="Unknown" />
+              </label>
+              <label class="field">
+                <span class="lbl">Language</span>
+                <select id="langInput">
+                  <option value="en" selected>English</option>
+                  <option value="zh">Chinese</option>
+                  <option value="ja">Japanese</option>
+                  <option value="ko">Korean</option>
+                  <option value="es">Spanish</option>
+                  <option value="fr">French</option>
+                  <option value="de">German</option>
+                  <option value="pt">Portuguese</option>
+                  <option value="ru">Russian</option>
+                  <option value="ar">Arabic</option>
+                </select>
+              </label>
+            </div>
+          </div>
 
-  function naturalCompare(a, b){
-    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-  }
-  function fmtBytes(n){
-    if(n < 1024) return n + ' B';
-    if(n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
-    return (n/1024/1024).toFixed(1) + ' MB';
-  }
-  function escapeXml(s){
-    return String(s || '').replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]));
-  }
-  function pad(n, width){ return String(n).padStart(width, '0'); }
-  function uuid(){
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = Math.random()*16|0, v = c === 'x' ? r : (r&0x3|0x8);
-      return v.toString(16);
-    });
-  }
+          <div class="card">
+            <h2>Image handling</h2>
+            <div class="toggle-row">
+              <div>
+                <div class="lbl">Optimize file size</div>
+                <div class="sub">
+                  Resizes and re-compresses pages — keeps each EPUB much smaller
+                </div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="compressToggle" checked />
+                <span class="track"></span>
+              </label>
+            </div>
+            <div class="compress-opts" id="compressOpts">
+              <label class="field" style="margin-bottom: 0">
+                <span class="lbl">Max width</span>
+                <select id="maxWidth">
+                  <option value="1200">1200 px</option>
+                  <option value="1600" selected>1600 px</option>
+                  <option value="2000">2000 px</option>
+                  <option value="2400">2400 px</option>
+                </select>
+              </label>
+              <label class="field" style="margin-bottom: 0">
+                <span class="lbl">Quality</span>
+                <div class="slider-row">
+                  <input
+                    type="range"
+                    id="quality"
+                    min="50"
+                    max="95"
+                    value="82"
+                    step="1"
+                  />
+                  <span class="slider-val" id="qualityVal">82</span>
+                </div>
+              </label>
+            </div>
+            <div class="stats">
+              <div class="stat">
+                <div class="k">Total pages</div>
+                <div class="v" id="statPages">0</div>
+              </div>
+              <div class="stat">
+                <div class="k">Est. size</div>
+                <div class="v" id="statSize">—</div>
+              </div>
+            </div>
+          </div>
 
-  // ---------- conflict dialog ----------
-  let rememberedAction = null;
-  function askConflict(name){
-    if(rememberedAction) return Promise.resolve(rememberedAction);
-    return new Promise((resolve) => {
-      conflictName.textContent = name;
-      applyAllConflicts.checked = false;
-      conflictOverlay.classList.add('on');
-      const buttons = conflictOverlay.querySelectorAll('.opts button');
-      function onClick(e){
-        const action = e.currentTarget.dataset.action;
-        if(applyAllConflicts.checked) rememberedAction = action;
-        cleanup();
-        resolve(action);
-      }
-      function cleanup(){
-        buttons.forEach(b => b.removeEventListener('click', onClick));
-        conflictOverlay.classList.remove('on');
-      }
-      buttons.forEach(b => b.addEventListener('click', onClick));
-    });
-  }
-  function uniqueName(name, existingNames){
-    const dot = name.lastIndexOf('.');
-    const base = dot > -1 ? name.slice(0, dot) : name;
-    const ext = dot > -1 ? name.slice(dot) : '';
-    let i = 1, candidate = `${base} (${i})${ext}`;
-    while(existingNames.has(candidate)){ i++; candidate = `${base} (${i})${ext}`; }
-    return candidate;
-  }
+          <div class="card">
+            <h2>Generate</h2>
+            <div class="toggle-row">
+              <div>
+                <div class="lbl">Combine all volumes into one book</div>
+                <div class="sub" id="combineSub">
+                  Merge every volume's pages into a single EPUB, in volume order
+                </div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="combineToggle" />
+                <span class="track"></span>
+              </label>
+            </div>
+            <div class="footer-actions">
+              <button
+                class="btn primary"
+                id="generateBtn"
+                type="button"
+                disabled
+              >
+                Add pages first
+              </button>
+              <div class="status-msg" id="statusMsg"></div>
+            </div>
+            <div class="progress-wrap" id="progressWrap">
+              <div class="progress-label">
+                <span id="progressLabel">Stitching pages…</span
+                ><span id="progressPct">0%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+            </div>
+            <p class="note">
+              <strong>Note:</strong> with multiple volumes, Bindery builds one
+              EPUB per volume, then bundles them into a single .zip so your
+              browser doesn't try to auto-download several files at once. Each
+              volume uses its own name as the EPUB title. Empty volumes are
+              skipped.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  // ---------- volume model ----------
-  function makeVolume(){
-    volCounter++;
-    return { id: 'v' + volCounter, index: volCounter, title: '', collapsed: false, pages: [], dom: null };
-  }
+    <script>
+      (function () {
+        const state = { volumes: [] };
+        let volCounter = 0,
+          pageCounter = 0;
 
-  function addVolume(){
-    const v = makeVolume();
-    state.volumes.push(v);
-    buildVolumeCard(v);
-    refreshChrome();
-  }
+        const el = (id) => document.getElementById(id);
+        const volumesEl = el("volumes");
+        const addVolBtn = el("addVolBtn");
+        const statPages = el("statPages");
+        const statSize = el("statSize");
+        const spineCount = el("spineCount");
+        const spineBars = el("spineBars");
+        const generateBtn = el("generateBtn");
+        const statusMsg = el("statusMsg");
+        const progressWrap = el("progressWrap");
+        const progressFill = el("progressFill");
+        const progressPct = el("progressPct");
+        const progressLabel = el("progressLabel");
+        const compressToggle = el("compressToggle");
+        const compressOpts = el("compressOpts");
+        const combineToggle = el("combineToggle");
+        const quality = el("quality");
+        const qualityVal = el("qualityVal");
+        const conflictOverlay = el("conflictOverlay");
+        const conflictName = el("conflictName");
+        const applyAllConflicts = el("applyAllConflicts");
 
-  function removeVolume(v){
-    if(state.volumes.length <= 1) return;
-    v.pages.forEach(p => URL.revokeObjectURL(p.url));
-    v.dom.card.remove();
-    state.volumes = state.volumes.filter(x => x.id !== v.id);
-    refreshChrome();
-  }
+        function naturalCompare(a, b) {
+          return a.localeCompare(b, undefined, {
+            numeric: true,
+            sensitivity: "base",
+          });
+        }
+        function fmtBytes(n) {
+          if (n < 1024) return n + " B";
+          if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+          return (n / 1024 / 1024).toFixed(1) + " MB";
+        }
+        function escapeXml(s) {
+          return String(s || "").replace(
+            /[<>&'"]/g,
+            (c) =>
+              ({
+                "<": "&lt;",
+                ">": "&gt;",
+                "&": "&amp;",
+                "'": "&apos;",
+                '"': "&quot;",
+              })[c],
+          );
+        }
+        function pad(n, width) {
+          return String(n).padStart(width, "0");
+        }
+        function uuid() {
+          return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+            /[xy]/g,
+            (c) => {
+              const r = (Math.random() * 16) | 0,
+                v = c === "x" ? r : (r & 0x3) | 0x8;
+              return v.toString(16);
+            },
+          );
+        }
 
-  function buildVolumeCard(v){
-    const card = document.createElement('div');
-    card.className = 'vol-card';
+        // ---------- conflict dialog ----------
+        let rememberedAction = null;
+        function askConflict(name) {
+          if (rememberedAction) return Promise.resolve(rememberedAction);
+          return new Promise((resolve) => {
+            conflictName.textContent = name;
+            applyAllConflicts.checked = false;
+            conflictOverlay.classList.add("on");
+            const buttons = conflictOverlay.querySelectorAll(".opts button");
+            function onClick(e) {
+              const action = e.currentTarget.dataset.action;
+              if (applyAllConflicts.checked) rememberedAction = action;
+              cleanup();
+              resolve(action);
+            }
+            function cleanup() {
+              buttons.forEach((b) => b.removeEventListener("click", onClick));
+              conflictOverlay.classList.remove("on");
+            }
+            buttons.forEach((b) => b.addEventListener("click", onClick));
+          });
+        }
+        function uniqueName(name, existingNames) {
+          const dot = name.lastIndexOf(".");
+          const base = dot > -1 ? name.slice(0, dot) : name;
+          const ext = dot > -1 ? name.slice(dot) : "";
+          let i = 1,
+            candidate = `${base} (${i})${ext}`;
+          while (existingNames.has(candidate)) {
+            i++;
+            candidate = `${base} (${i})${ext}`;
+          }
+          return candidate;
+        }
 
-    const head = document.createElement('div');
-    head.className = 'vol-head';
-    head.innerHTML = `
+        // ---------- volume model ----------
+        function makeVolume() {
+          volCounter++;
+          return {
+            id: "v" + volCounter,
+            index: volCounter,
+            title: "",
+            collapsed: false,
+            pages: [],
+            dom: null,
+          };
+        }
+
+        function addVolume() {
+          const v = makeVolume();
+          state.volumes.push(v);
+          buildVolumeCard(v);
+          refreshChrome();
+        }
+
+        function removeVolume(v) {
+          if (state.volumes.length <= 1) return;
+          v.pages.forEach((p) => URL.revokeObjectURL(p.url));
+          v.dom.card.remove();
+          state.volumes = state.volumes.filter((x) => x.id !== v.id);
+          refreshChrome();
+        }
+
+        function buildVolumeCard(v) {
+          const card = document.createElement("div");
+          card.className = "vol-card";
+
+          const head = document.createElement("div");
+          head.className = "vol-head";
+          head.innerHTML = `
       <span class="chevron">&#9660;</span>
       <input class="vol-title" type="text" placeholder="Volume ${v.index}" maxlength="120">
       <span class="vol-count">0 pages</span>
       <button class="vol-remove" type="button" title="Remove volume">&times;</button>
     `;
-    const titleInput = head.querySelector('.vol-title');
-    titleInput.value = v.title;
-    titleInput.addEventListener('input', () => { v.title = titleInput.value; });
-    titleInput.addEventListener('click', (e) => e.stopPropagation());
-    const countEl = head.querySelector('.vol-count');
-    const removeBtn = head.querySelector('.vol-remove');
-    removeBtn.addEventListener('click', (e) => { e.stopPropagation(); removeVolume(v); });
-    head.addEventListener('click', () => {
-      v.collapsed = !v.collapsed;
-      card.classList.toggle('collapsed', v.collapsed);
-    });
+          const titleInput = head.querySelector(".vol-title");
+          titleInput.value = v.title;
+          titleInput.addEventListener("input", () => {
+            v.title = titleInput.value;
+          });
+          titleInput.addEventListener("click", (e) => e.stopPropagation());
+          const countEl = head.querySelector(".vol-count");
+          const removeBtn = head.querySelector(".vol-remove");
+          removeBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            removeVolume(v);
+          });
+          head.addEventListener("click", () => {
+            v.collapsed = !v.collapsed;
+            card.classList.toggle("collapsed", v.collapsed);
+          });
 
-    const body = document.createElement('div');
-    body.className = 'vol-body';
-    body.innerHTML = `
+          const body = document.createElement("div");
+          body.className = "vol-body";
+          body.innerHTML = `
       <div class="vol-body-inner">
         <div class="dropzone">
           <span class="icon">&#128193;</span>
@@ -555,424 +1097,613 @@
       </div>
     `;
 
-    const dropzone = body.querySelector('.dropzone');
-    const fileInput = body.querySelector('.file-input');
-    const folderInput = body.querySelector('.folder-input');
-    const queueEl = body.querySelector('.queue');
-    const emptyState = body.querySelector('.empty-state');
+          const dropzone = body.querySelector(".dropzone");
+          const fileInput = body.querySelector(".file-input");
+          const folderInput = body.querySelector(".folder-input");
+          const queueEl = body.querySelector(".queue");
+          const emptyState = body.querySelector(".empty-state");
 
-    ['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, (e) => {
-      e.preventDefault(); e.stopPropagation(); dropzone.classList.add('drag');
-    }));
-    ['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, (e) => {
-      e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('drag');
-    }));
-    dropzone.addEventListener('drop', (e) => addFiles(v, e.dataTransfer.files));
-    dropzone.addEventListener('click', () => fileInput.click());
-    body.querySelector('.btn-pick-files').addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
-    body.querySelector('.btn-pick-folder').addEventListener('click', (e) => { e.stopPropagation(); folderInput.click(); });
-    fileInput.addEventListener('click', (e) => e.stopPropagation());
-    folderInput.addEventListener('click', (e) => e.stopPropagation());
-    fileInput.addEventListener('change', (e) => { addFiles(v, e.target.files); e.target.value = ''; });
-    folderInput.addEventListener('change', (e) => { addFiles(v, e.target.files); e.target.value = ''; });
+          ["dragenter", "dragover"].forEach((ev) =>
+            dropzone.addEventListener(ev, (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              dropzone.classList.add("drag");
+            }),
+          );
+          ["dragleave", "drop"].forEach((ev) =>
+            dropzone.addEventListener(ev, (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              dropzone.classList.remove("drag");
+            }),
+          );
+          dropzone.addEventListener("drop", (e) =>
+            addFiles(v, e.dataTransfer.files),
+          );
+          dropzone.addEventListener("click", () => fileInput.click());
+          body
+            .querySelector(".btn-pick-files")
+            .addEventListener("click", (e) => {
+              e.stopPropagation();
+              fileInput.click();
+            });
+          body
+            .querySelector(".btn-pick-folder")
+            .addEventListener("click", (e) => {
+              e.stopPropagation();
+              folderInput.click();
+            });
+          fileInput.addEventListener("click", (e) => e.stopPropagation());
+          folderInput.addEventListener("click", (e) => e.stopPropagation());
+          fileInput.addEventListener("change", (e) => {
+            addFiles(v, e.target.files);
+            e.target.value = "";
+          });
+          folderInput.addEventListener("change", (e) => {
+            addFiles(v, e.target.files);
+            e.target.value = "";
+          });
 
-    body.querySelector('.btn-sort').addEventListener('click', (e) => {
-      e.stopPropagation();
-      v.pages.sort((a,b) => naturalCompare(a.name, b.name));
-      renderVolumeQueue(v);
-    });
-    body.querySelector('.btn-clear').addEventListener('click', (e) => {
-      e.stopPropagation();
-      v.pages.forEach(p => URL.revokeObjectURL(p.url));
-      v.pages = [];
-      renderVolumeQueue(v);
-    });
+          body.querySelector(".btn-sort").addEventListener("click", (e) => {
+            e.stopPropagation();
+            v.pages.sort((a, b) => naturalCompare(a.name, b.name));
+            renderVolumeQueue(v);
+          });
+          body.querySelector(".btn-clear").addEventListener("click", (e) => {
+            e.stopPropagation();
+            v.pages.forEach((p) => URL.revokeObjectURL(p.url));
+            v.pages = [];
+            renderVolumeQueue(v);
+          });
 
-    card.appendChild(head);
-    card.appendChild(body);
-    volumesEl.appendChild(card);
+          card.appendChild(head);
+          card.appendChild(body);
+          volumesEl.appendChild(card);
 
-    v.dom = { card, titleInput, countEl, queueEl, emptyState };
-    renderVolumeQueue(v);
-  }
+          v.dom = { card, titleInput, countEl, queueEl, emptyState };
+          renderVolumeQueue(v);
+        }
 
-  function attachDrag(row, v){
-    row.addEventListener('dragstart', () => { row.dataset.dragging = '1'; row.classList.add('dragging'); });
-    row.addEventListener('dragend', () => { row.classList.remove('dragging'); });
-    row.addEventListener('dragover', (e) => e.preventDefault());
-    row.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const draggingRow = v.dom.queueEl.querySelector('.row.dragging');
-      if(!draggingRow || draggingRow === row) return;
-      const srcId = draggingRow.dataset.id, targetId = row.dataset.id;
-      const srcIdx = v.pages.findIndex(p => p.id === srcId);
-      const tgtIdx = v.pages.findIndex(p => p.id === targetId);
-      const [moved] = v.pages.splice(srcIdx, 1);
-      v.pages.splice(tgtIdx, 0, moved);
-      renderVolumeQueue(v);
-    });
-  }
+        function attachDrag(row, v) {
+          row.addEventListener("dragstart", () => {
+            row.dataset.dragging = "1";
+            row.classList.add("dragging");
+          });
+          row.addEventListener("dragend", () => {
+            row.classList.remove("dragging");
+          });
+          row.addEventListener("dragover", (e) => e.preventDefault());
+          row.addEventListener("drop", (e) => {
+            e.preventDefault();
+            const draggingRow = v.dom.queueEl.querySelector(".row.dragging");
+            if (!draggingRow || draggingRow === row) return;
+            const srcId = draggingRow.dataset.id,
+              targetId = row.dataset.id;
+            const srcIdx = v.pages.findIndex((p) => p.id === srcId);
+            const tgtIdx = v.pages.findIndex((p) => p.id === targetId);
+            const [moved] = v.pages.splice(srcIdx, 1);
+            v.pages.splice(tgtIdx, 0, moved);
+            renderVolumeQueue(v);
+          });
+        }
 
-  function renderVolumeQueue(v){
-    const { queueEl, emptyState, countEl } = v.dom;
-    queueEl.querySelectorAll('.row').forEach(r => r.remove());
-    emptyState.style.display = v.pages.length ? 'none' : 'block';
+        function renderVolumeQueue(v) {
+          const { queueEl, emptyState, countEl } = v.dom;
+          queueEl.querySelectorAll(".row").forEach((r) => r.remove());
+          emptyState.style.display = v.pages.length ? "none" : "block";
 
-    v.pages.forEach((p, i) => {
-      const row = document.createElement('div');
-      row.className = 'row';
-      row.draggable = true;
-      row.dataset.id = p.id;
-      row.innerHTML = `
+          v.pages.forEach((p, i) => {
+            const row = document.createElement("div");
+            row.className = "row";
+            row.draggable = true;
+            row.dataset.id = p.id;
+            row.innerHTML = `
         <span class="handle">&#8942;&#8942;</span>
-        <span class="num">${i+1}</span>
+        <span class="num">${i + 1}</span>
         <img src="${p.url}" loading="lazy" alt="">
         <span class="name">${p.name}</span>
         <span class="size">${fmtBytes(p.size)}</span>
-        ${i===0 ? '<span class="cover-badge">COVER</span>' : ''}
+        ${i === 0 ? '<span class="cover-badge">COVER</span>' : ""}
         <button class="rm" type="button" title="Remove">&times;</button>
       `;
-      row.querySelector('.rm').addEventListener('click', () => {
-        URL.revokeObjectURL(p.url);
-        v.pages = v.pages.filter(x => x.id !== p.id);
-        renderVolumeQueue(v);
-      });
-      attachDrag(row, v);
-      queueEl.appendChild(row);
-    });
+            row.querySelector(".rm").addEventListener("click", () => {
+              URL.revokeObjectURL(p.url);
+              v.pages = v.pages.filter((x) => x.id !== p.id);
+              renderVolumeQueue(v);
+            });
+            attachDrag(row, v);
+            queueEl.appendChild(row);
+          });
 
-    countEl.textContent = v.pages.length + (v.pages.length === 1 ? ' page' : ' pages');
-    refreshChrome();
-  }
-
-  async function addFiles(v, fileList){
-    const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
-    if(!files.length) return;
-
-    rememberedAction = null;
-    const existingNames = new Set(v.pages.map(p => p.name));
-
-    for(const f of files){
-      if(!existingNames.has(f.name)){
-        v.pages.push({ id: 'p' + (pageCounter++), file: f, name: f.name, size: f.size, url: URL.createObjectURL(f) });
-        existingNames.add(f.name);
-        continue;
-      }
-      const action = await askConflict(f.name);
-      if(action === 'skip'){
-        continue;
-      } else if(action === 'replace'){
-        const idx = v.pages.findIndex(p => p.name === f.name);
-        if(idx > -1){
-          URL.revokeObjectURL(v.pages[idx].url);
-          v.pages[idx] = { id: v.pages[idx].id, file: f, name: f.name, size: f.size, url: URL.createObjectURL(f) };
+          countEl.textContent =
+            v.pages.length + (v.pages.length === 1 ? " page" : " pages");
+          refreshChrome();
         }
-      } else if(action === 'rename'){
-        const newName = uniqueName(f.name, existingNames);
-        v.pages.push({ id: 'p' + (pageCounter++), file: f, name: newName, size: f.size, url: URL.createObjectURL(f) });
-        existingNames.add(newName);
-      }
-      renderVolumeQueue(v);
-    }
-    renderVolumeQueue(v);
-  }
 
-  // ---------- global chrome (spine meter, stats, generate button) ----------
-  function refreshChrome(){
-    const totalPages = state.volumes.reduce((s,v) => s + v.pages.length, 0);
-    const totalRaw = state.volumes.reduce((s,v) => s + v.pages.reduce((ss,p) => ss + p.size, 0), 0);
+        async function addFiles(v, fileList) {
+          const files = Array.from(fileList).filter((f) =>
+            f.type.startsWith("image/"),
+          );
+          if (!files.length) return;
 
-    spineCount.textContent = totalPages + (totalPages === 1 ? ' page' : ' pages');
-    spineBars.innerHTML = '';
-    const barCount = 24;
-    const filled = Math.min(barCount, Math.ceil((totalPages / 1200) * barCount));
-    for(let i=0;i<barCount;i++){
-      const b = document.createElement('div');
-      b.className = 'bar' + (i < filled ? ' on' : '');
-      b.style.height = (8 + (i/barCount)*26) + 'px';
-      spineBars.appendChild(b);
-    }
+          rememberedAction = null;
+          const existingNames = new Set(v.pages.map((p) => p.name));
 
-    statPages.textContent = totalPages;
-    if(!totalPages){
-      statSize.textContent = '—';
-    } else if(compressToggle.checked){
-      const q = parseInt(quality.value, 10) / 82;
-      statSize.textContent = '~' + fmtBytes(totalRaw * 0.35 * q);
-    } else {
-      statSize.textContent = '~' + fmtBytes(totalRaw);
-    }
+          for (const f of files) {
+            if (!existingNames.has(f.name)) {
+              v.pages.push({
+                id: "p" + pageCounter++,
+                file: f,
+                name: f.name,
+                size: f.size,
+                url: URL.createObjectURL(f),
+              });
+              existingNames.add(f.name);
+              continue;
+            }
+            const action = await askConflict(f.name);
+            if (action === "skip") {
+              continue;
+            } else if (action === "replace") {
+              const idx = v.pages.findIndex((p) => p.name === f.name);
+              if (idx > -1) {
+                URL.revokeObjectURL(v.pages[idx].url);
+                v.pages[idx] = {
+                  id: v.pages[idx].id,
+                  file: f,
+                  name: f.name,
+                  size: f.size,
+                  url: URL.createObjectURL(f),
+                };
+              }
+            } else if (action === "rename") {
+              const newName = uniqueName(f.name, existingNames);
+              v.pages.push({
+                id: "p" + pageCounter++,
+                file: f,
+                name: newName,
+                size: f.size,
+                url: URL.createObjectURL(f),
+              });
+              existingNames.add(newName);
+            }
+            renderVolumeQueue(v);
+          }
+          renderVolumeQueue(v);
+        }
 
-    const volsWithPages = state.volumes.filter(v => v.pages.length).length;
-    if(totalPages === 0){
-      generateBtn.disabled = true;
-      generateBtn.textContent = 'Add pages first';
-    } else if(combineToggle.checked || volsWithPages <= 1){
-      generateBtn.disabled = false;
-      generateBtn.textContent = 'Generate EPUB';
-    } else {
-      generateBtn.disabled = false;
-      generateBtn.textContent = `Generate EPUBs (${volsWithPages})`;
-    }
+        // ---------- global chrome (spine meter, stats, generate button) ----------
+        function refreshChrome() {
+          const totalPages = state.volumes.reduce(
+            (s, v) => s + v.pages.length,
+            0,
+          );
+          const totalRaw = state.volumes.reduce(
+            (s, v) => s + v.pages.reduce((ss, p) => ss + p.size, 0),
+            0,
+          );
 
-    state.volumes.forEach(v => {
-      if(state.volumes.length <= 1){
-        v.dom.card.querySelector('.vol-remove').style.visibility = 'hidden';
-      } else {
-        v.dom.card.querySelector('.vol-remove').style.visibility = 'visible';
-      }
-    });
-  }
+          spineCount.textContent =
+            totalPages + (totalPages === 1 ? " page" : " pages");
+          spineBars.innerHTML = "";
+          const barCount = 24;
+          const filled = Math.min(
+            barCount,
+            Math.ceil((totalPages / 1200) * barCount),
+          );
+          for (let i = 0; i < barCount; i++) {
+            const b = document.createElement("div");
+            b.className = "bar" + (i < filled ? " on" : "");
+            b.style.height = 8 + (i / barCount) * 26 + "px";
+            spineBars.appendChild(b);
+          }
 
-  addVolBtn.addEventListener('click', addVolume);
-  compressToggle.addEventListener('change', () => {
-    compressOpts.style.opacity = compressToggle.checked ? '1' : '.4';
-    compressOpts.style.pointerEvents = compressToggle.checked ? 'auto' : 'none';
-    refreshChrome();
-  });
-  quality.addEventListener('input', () => { qualityVal.textContent = quality.value; refreshChrome(); });
-  combineToggle.addEventListener('change', refreshChrome);
+          statPages.textContent = totalPages;
+          if (!totalPages) {
+            statSize.textContent = "—";
+          } else if (compressToggle.checked) {
+            const q = parseInt(quality.value, 10) / 82;
+            statSize.textContent = "~" + fmtBytes(totalRaw * 0.35 * q);
+          } else {
+            statSize.textContent = "~" + fmtBytes(totalRaw);
+          }
 
-  // ---------- epub generation ----------
-  function setStatus(msg, cls){
-    statusMsg.textContent = msg || '';
-    statusMsg.className = 'status-msg' + (cls ? ' ' + cls : '');
-  }
-  function setProgress(pct, label){
-    progressWrap.classList.add('on');
-    progressFill.style.width = pct + '%';
-    progressPct.textContent = Math.round(pct) + '%';
-    if(label) progressLabel.textContent = label;
-  }
+          const volsWithPages = state.volumes.filter(
+            (v) => v.pages.length,
+          ).length;
+          if (totalPages === 0) {
+            generateBtn.disabled = true;
+            generateBtn.textContent = "Add pages first";
+          } else if (combineToggle.checked || volsWithPages <= 1) {
+            generateBtn.disabled = false;
+            generateBtn.textContent = "Generate EPUB";
+          } else {
+            generateBtn.disabled = false;
+            generateBtn.textContent = `Generate EPUBs (${volsWithPages})`;
+          }
 
-  async function compressImage(file, maxWidth, q){
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        let w = img.naturalWidth, h = img.naturalHeight;
-        if(w > maxWidth){ h = Math.round(h * (maxWidth / w)); w = maxWidth; }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        canvas.toBlob((blob) => {
-          if(!blob){ reject(new Error('compression failed')); return; }
-          blob.arrayBuffer().then(resolve).catch(reject);
-        }, 'image/jpeg', q);
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  }
+          state.volumes.forEach((v) => {
+            if (state.volumes.length <= 1) {
+              v.dom.card.querySelector(".vol-remove").style.visibility =
+                "hidden";
+            } else {
+              v.dom.card.querySelector(".vol-remove").style.visibility =
+                "visible";
+            }
+          });
+        }
 
-  async function buildEpubBlob(pages, title, author, lang, doCompress, maxW, q, onProgress, chapters){
-    const total = pages.length;
-    const digits = String(total).length < 4 ? 4 : String(total).length;
-    const bookId = 'urn:uuid:' + uuid();
-    const zip = new JSZip();
+        addVolBtn.addEventListener("click", addVolume);
+        compressToggle.addEventListener("change", () => {
+          compressOpts.style.opacity = compressToggle.checked ? "1" : ".4";
+          compressOpts.style.pointerEvents = compressToggle.checked
+            ? "auto"
+            : "none";
+          refreshChrome();
+        });
+        quality.addEventListener("input", () => {
+          qualityVal.textContent = quality.value;
+          refreshChrome();
+        });
+        combineToggle.addEventListener("change", refreshChrome);
 
-    zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' });
-    zip.file('META-INF/container.xml',
-`<?xml version="1.0" encoding="UTF-8"?>
+        // ---------- epub generation ----------
+        function setStatus(msg, cls) {
+          statusMsg.textContent = msg || "";
+          statusMsg.className = "status-msg" + (cls ? " " + cls : "");
+        }
+        function setProgress(pct, label) {
+          progressWrap.classList.add("on");
+          progressFill.style.width = pct + "%";
+          progressPct.textContent = Math.round(pct) + "%";
+          if (label) progressLabel.textContent = label;
+        }
+
+        async function compressImage(file, maxWidth, q) {
+          return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+              let w = img.naturalWidth,
+                h = img.naturalHeight;
+              if (w > maxWidth) {
+                h = Math.round(h * (maxWidth / w));
+                w = maxWidth;
+              }
+              const canvas = document.createElement("canvas");
+              canvas.width = w;
+              canvas.height = h;
+              canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+              canvas.toBlob(
+                (blob) => {
+                  if (!blob) {
+                    reject(new Error("compression failed"));
+                    return;
+                  }
+                  blob.arrayBuffer().then(resolve).catch(reject);
+                },
+                "image/jpeg",
+                q,
+              );
+            };
+            img.onerror = reject;
+            img.src = URL.createObjectURL(file);
+          });
+        }
+
+        async function buildEpubBlob(
+          pages,
+          title,
+          author,
+          lang,
+          doCompress,
+          maxW,
+          q,
+          onProgress,
+          chapters,
+        ) {
+          const total = pages.length;
+          const digits = String(total).length < 4 ? 4 : String(total).length;
+          const bookId = "urn:uuid:" + uuid();
+          const zip = new JSZip();
+
+          zip.file("mimetype", "application/epub+zip", {
+            compression: "STORE",
+          });
+          zip.file(
+            "META-INF/container.xml",
+            `<?xml version="1.0" encoding="UTF-8"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
   <rootfiles>
     <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
   </rootfiles>
-</container>`);
-    zip.file('OEBPS/style.css',
-`html, body { margin:0; padding:0; background:#fff; }
+</container>`,
+          );
+          zip.file(
+            "OEBPS/style.css",
+            `html, body { margin:0; padding:0; background:#fff; }
 .page { text-align:center; }
-.page img { max-width:100%; max-height:100vh; display:block; margin:0 auto; }`);
+.page img { max-width:100%; max-height:100vh; display:block; margin:0 auto; }`,
+          );
 
-    const manifestItems = [];
-    const spineItems = [];
+          const manifestItems = [];
+          const spineItems = [];
 
-    for(let i=0;i<total;i++){
-      const p = pages[i];
-      const n = pad(i+1, digits);
-      let bytes, ext, mime;
+          for (let i = 0; i < total; i++) {
+            const p = pages[i];
+            const n = pad(i + 1, digits);
+            let bytes, ext, mime;
 
-      if(onProgress) onProgress(i/total, i+1, total);
-      if(i % 8 === 0) await new Promise(r => setTimeout(r, 0));
+            if (onProgress) onProgress(i / total, i + 1, total);
+            if (i % 8 === 0) await new Promise((r) => setTimeout(r, 0));
 
-      if(doCompress){
-        try { bytes = await compressImage(p.file, maxW, q); ext = 'jpg'; mime = 'image/jpeg'; }
-        catch(e){
-          bytes = await p.file.arrayBuffer();
-          ext = (p.file.type.split('/')[1] || 'jpg').replace('jpeg','jpg');
-          mime = p.file.type || 'image/jpeg';
-        }
-      } else {
-        bytes = await p.file.arrayBuffer();
-        ext = (p.file.type.split('/')[1] || 'jpg').replace('jpeg','jpg');
-        mime = p.file.type || 'image/jpeg';
-      }
+            if (doCompress) {
+              try {
+                bytes = await compressImage(p.file, maxW, q);
+                ext = "jpg";
+                mime = "image/jpeg";
+              } catch (e) {
+                bytes = await p.file.arrayBuffer();
+                ext = (p.file.type.split("/")[1] || "jpg").replace(
+                  "jpeg",
+                  "jpg",
+                );
+                mime = p.file.type || "image/jpeg";
+              }
+            } else {
+              bytes = await p.file.arrayBuffer();
+              ext = (p.file.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
+              mime = p.file.type || "image/jpeg";
+            }
 
-      const imgName = `images/img${n}.${ext}`;
-      zip.file('OEBPS/' + imgName, bytes, { compression: 'DEFLATE' });
+            const imgName = `images/img${n}.${ext}`;
+            zip.file("OEBPS/" + imgName, bytes, { compression: "DEFLATE" });
 
-      const pageName = `page${n}.xhtml`;
-      zip.file('OEBPS/' + pageName,
-`<?xml version="1.0" encoding="UTF-8"?>
+            const pageName = `page${n}.xhtml`;
+            zip.file(
+              "OEBPS/" + pageName,
+              `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>Page ${i+1}</title>
+<title>Page ${i + 1}</title>
 <link rel="stylesheet" type="text/css" href="style.css"/>
 </head>
 <body>
-<div class="page"><img src="${imgName}" alt="Page ${i+1}"/></div>
+<div class="page"><img src="${imgName}" alt="Page ${i + 1}"/></div>
 </body>
-</html>`);
+</html>`,
+            );
 
-      manifestItems.push(`    <item id="img${n}" href="${imgName}" media-type="${mime}"${i===0 ? ' properties="cover-image"' : ''}/>`);
-      manifestItems.push(`    <item id="page${n}" href="${pageName}" media-type="application/xhtml+xml"/>`);
-      spineItems.push(`    <itemref idref="page${n}"/>`);
-    }
+            manifestItems.push(
+              `    <item id="img${n}" href="${imgName}" media-type="${mime}"${i === 0 ? ' properties="cover-image"' : ""}/>`,
+            );
+            manifestItems.push(
+              `    <item id="page${n}" href="${pageName}" media-type="application/xhtml+xml"/>`,
+            );
+            spineItems.push(`    <itemref idref="page${n}"/>`);
+          }
 
-    const firstPage = `page${pad(1, digits)}.xhtml`;
-    const navEntries = chapters && chapters.length
-      ? chapters.map(c => ({ label: c.label, href: `page${pad(c.startPage, digits)}.xhtml` }))
-      : [{ label: 'Start reading', href: firstPage }];
+          const firstPage = `page${pad(1, digits)}.xhtml`;
+          const navEntries =
+            chapters && chapters.length
+              ? chapters.map((c) => ({
+                  label: c.label,
+                  href: `page${pad(c.startPage, digits)}.xhtml`,
+                }))
+              : [{ label: "Start reading", href: firstPage }];
 
-    zip.file('OEBPS/nav.xhtml',
-`<?xml version="1.0" encoding="UTF-8"?>
+          zip.file(
+            "OEBPS/nav.xhtml",
+            `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head><title>Table of contents</title></head>
 <body>
 <nav epub:type="toc" id="toc">
 <ol>
-${navEntries.map(e => `<li><a href="${e.href}">${escapeXml(e.label)}</a></li>`).join('\n')}
+${navEntries.map((e) => `<li><a href="${e.href}">${escapeXml(e.label)}</a></li>`).join("\n")}
 </ol>
 </nav>
 </body>
-</html>`);
+</html>`,
+          );
 
-    zip.file('OEBPS/toc.ncx',
-`<?xml version="1.0" encoding="UTF-8"?>
+          zip.file(
+            "OEBPS/toc.ncx",
+            `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
 <head><meta name="dtb:uid" content="${bookId}"/></head>
 <docTitle><text>${escapeXml(title)}</text></docTitle>
 <navMap>
-${navEntries.map((e,i) => `<navPoint id="navpoint-${i+1}" playOrder="${i+1}">
+${navEntries
+  .map(
+    (e, i) => `<navPoint id="navpoint-${i + 1}" playOrder="${i + 1}">
 <navLabel><text>${escapeXml(e.label)}</text></navLabel>
 <content src="${e.href}"/>
-</navPoint>`).join('\n')}
+</navPoint>`,
+  )
+  .join("\n")}
 </navMap>
-</ncx>`);
+</ncx>`,
+          );
 
-    zip.file('OEBPS/content.opf',
-`<?xml version="1.0" encoding="UTF-8"?>
+          zip.file(
+            "OEBPS/content.opf",
+            `<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="BookId">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
     <dc:identifier id="BookId">${bookId}</dc:identifier>
     <dc:title>${escapeXml(title)}</dc:title>
     <dc:creator>${escapeXml(author)}</dc:creator>
     <dc:language>${lang}</dc:language>
-    <meta property="dcterms:modified">${new Date().toISOString().replace(/\.\d+Z$/, 'Z')}</meta>
+    <meta property="dcterms:modified">${new Date().toISOString().replace(/\.\d+Z$/, "Z")}</meta>
   </metadata>
   <manifest>
     <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
     <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
     <item id="css" href="style.css" media-type="text/css"/>
-${manifestItems.join('\n')}
+${manifestItems.join("\n")}
   </manifest>
   <spine toc="ncx">
-${spineItems.join('\n')}
+${spineItems.join("\n")}
   </spine>
-</package>`);
+</package>`,
+          );
 
-    return zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-  }
-
-  function safeName(s){ return (s || '').replace(/[^a-z0-9\- _]/gi, '').trim(); }
-
-  async function generateAll(){
-    const active = state.volumes.filter(v => v.pages.length > 0);
-    if(!active.length) return;
-
-    generateBtn.disabled = true;
-    setStatus('');
-    const series = el('seriesInput').value.trim();
-    const author = el('authorInput').value.trim() || 'Unknown';
-    const lang = el('langInput').value;
-    const doCompress = compressToggle.checked;
-    const maxW = parseInt(el('maxWidth').value, 10);
-    const q = parseInt(quality.value, 10) / 100;
-    const combine = combineToggle.checked;
-
-    const totalPagesAll = active.reduce((s,v) => s + v.pages.length, 0);
-    let pagesDoneBefore = 0;
-
-    try {
-      if(combine){
-        const combinedTitle = series || (active[0].title.trim() || 'Combined book');
-        const allPages = [];
-        const chapters = [];
-        active.forEach(v => {
-          const volTitle = v.title.trim() || `Volume ${v.index}`;
-          chapters.push({ label: volTitle, startPage: allPages.length + 1 });
-          allPages.push(...v.pages);
-        });
-        const blob = await buildEpubBlob(allPages, combinedTitle, author, lang, doCompress, maxW, q, (frac, cur, tot) => {
-          setProgress(frac*95, `Combining — page ${cur} / ${tot}`);
-        }, chapters);
-        setProgress(100, 'Done');
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = safeName(combinedTitle || 'book') + '.epub';
-        document.body.appendChild(a); a.click(); a.remove();
-        setStatus(`Done — ${fmtBytes(blob.size)} combined EPUB downloaded.`, 'ok');
-      } else if(active.length === 1){
-        const v = active[0];
-        const finalTitle = series ? `${series}-${v.index}` : (v.title.trim() || `Volume ${v.index}`);
-        const blob = await buildEpubBlob(v.pages, finalTitle, author, lang, doCompress, maxW, q, (frac, cur, tot) => {
-          setProgress(frac*95, `${finalTitle} — page ${cur} / ${tot}`);
-        });
-        setProgress(100, 'Done');
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = safeName(finalTitle || 'book') + '.epub';
-        document.body.appendChild(a); a.click(); a.remove();
-        setStatus(`Done — ${fmtBytes(blob.size)} EPUB downloaded.`, 'ok');
-      } else {
-        const outerZip = new JSZip();
-        for(const v of active){
-          const finalTitle = series ? `${series}-${v.index}` : (v.title.trim() || `Volume ${v.index}`);
-          const blob = await buildEpubBlob(v.pages, finalTitle, author, lang, doCompress, maxW, q, (frac, cur, tot) => {
-            const overall = ((pagesDoneBefore + frac*v.pages.length) / totalPagesAll) * 95;
-            setProgress(overall, `${finalTitle} — page ${cur} / ${tot}`);
+          return zip.generateAsync({
+            type: "blob",
+            compression: "DEFLATE",
+            compressionOptions: { level: 6 },
           });
-          pagesDoneBefore += v.pages.length;
-          outerZip.file(safeName(finalTitle || 'book') + '.epub', blob);
         }
-        setProgress(97, 'Packing series into a .zip');
-        await new Promise(r => setTimeout(r, 0));
-        const outerBlob = await outerZip.generateAsync({ type: 'blob' });
-        setProgress(100, 'Done');
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(outerBlob);
-        a.download = safeName(series || 'series') + '.zip';
-        document.body.appendChild(a); a.click(); a.remove();
-        setStatus(`Done — ${active.length} EPUBs bundled into a ${fmtBytes(outerBlob.size)} zip.`, 'ok');
-      }
-    } finally {
-      generateBtn.disabled = false;
-      setTimeout(() => progressWrap.classList.remove('on'), 1200);
-    }
-  }
 
-  generateBtn.addEventListener('click', () => {
-    generateAll().catch(err => {
-      console.error(err);
-      setStatus('Something went wrong: ' + err.message, 'err');
-      generateBtn.disabled = false;
-    });
-  });
+        function safeName(s) {
+          return (s || "").replace(/[^a-z0-9\- _]/gi, "").trim();
+        }
 
-  addVolume();
-})();
-</script>
-</body>
+        async function generateAll() {
+          const active = state.volumes.filter((v) => v.pages.length > 0);
+          if (!active.length) return;
+
+          generateBtn.disabled = true;
+          setStatus("");
+          const series = el("seriesInput").value.trim();
+          const author = el("authorInput").value.trim() || "Unknown";
+          const lang = el("langInput").value;
+          const doCompress = compressToggle.checked;
+          const maxW = parseInt(el("maxWidth").value, 10);
+          const q = parseInt(quality.value, 10) / 100;
+          const combine = combineToggle.checked;
+
+          const totalPagesAll = active.reduce((s, v) => s + v.pages.length, 0);
+          let pagesDoneBefore = 0;
+
+          try {
+            if (combine) {
+              const combinedTitle =
+                series || active[0].title.trim() || "Combined book";
+              const allPages = [];
+              const chapters = [];
+              active.forEach((v) => {
+                const volTitle = v.title.trim() || `Volume ${v.index}`;
+                chapters.push({
+                  label: volTitle,
+                  startPage: allPages.length + 1,
+                });
+                allPages.push(...v.pages);
+              });
+              const blob = await buildEpubBlob(
+                allPages,
+                combinedTitle,
+                author,
+                lang,
+                doCompress,
+                maxW,
+                q,
+                (frac, cur, tot) => {
+                  setProgress(frac * 95, `Combining — page ${cur} / ${tot}`);
+                },
+                chapters,
+              );
+              setProgress(100, "Done");
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(blob);
+              a.download = safeName(combinedTitle || "book") + ".epub";
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              setStatus(
+                `Done — ${fmtBytes(blob.size)} combined EPUB downloaded.`,
+                "ok",
+              );
+            } else if (active.length === 1) {
+              const v = active[0];
+              const finalTitle = series
+                ? `${series}-${v.index}`
+                : v.title.trim() || `Volume ${v.index}`;
+              const blob = await buildEpubBlob(
+                v.pages,
+                finalTitle,
+                author,
+                lang,
+                doCompress,
+                maxW,
+                q,
+                (frac, cur, tot) => {
+                  setProgress(
+                    frac * 95,
+                    `${finalTitle} — page ${cur} / ${tot}`,
+                  );
+                },
+              );
+              setProgress(100, "Done");
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(blob);
+              a.download = safeName(finalTitle || "book") + ".epub";
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              setStatus(`Done — ${fmtBytes(blob.size)} EPUB downloaded.`, "ok");
+            } else {
+              const outerZip = new JSZip();
+              for (const v of active) {
+                const finalTitle = series
+                  ? `${series}-${v.index}`
+                  : v.title.trim() || `Volume ${v.index}`;
+                const blob = await buildEpubBlob(
+                  v.pages,
+                  finalTitle,
+                  author,
+                  lang,
+                  doCompress,
+                  maxW,
+                  q,
+                  (frac, cur, tot) => {
+                    const overall =
+                      ((pagesDoneBefore + frac * v.pages.length) /
+                        totalPagesAll) *
+                      95;
+                    setProgress(
+                      overall,
+                      `${finalTitle} — page ${cur} / ${tot}`,
+                    );
+                  },
+                );
+                pagesDoneBefore += v.pages.length;
+                outerZip.file(safeName(finalTitle || "book") + ".epub", blob);
+              }
+              setProgress(97, "Packing series into a .zip");
+              await new Promise((r) => setTimeout(r, 0));
+              const outerBlob = await outerZip.generateAsync({ type: "blob" });
+              setProgress(100, "Done");
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(outerBlob);
+              a.download = safeName(series || "series") + ".zip";
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              setStatus(
+                `Done — ${active.length} EPUBs bundled into a ${fmtBytes(outerBlob.size)} zip.`,
+                "ok",
+              );
+            }
+          } finally {
+            generateBtn.disabled = false;
+            setTimeout(() => progressWrap.classList.remove("on"), 1200);
+          }
+        }
+
+        generateBtn.addEventListener("click", () => {
+          generateAll().catch((err) => {
+            console.error(err);
+            setStatus("Something went wrong: " + err.message, "err");
+            generateBtn.disabled = false;
+          });
+        });
+
+        addVolume();
+      })();
+    </script>
+  </body>
 </html>
